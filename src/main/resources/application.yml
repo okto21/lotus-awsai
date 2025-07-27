@@ -1,0 +1,58 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: lotus-awsai
+  
+  # AWS AI 설정
+  ai:
+    aws:
+      bedrock:
+        region: us-east-1
+        access-key: ${AWS_ACCESS_KEY_ID}
+        secret-key: ${AWS_SECRET_ACCESS_KEY}
+        model:
+          anthropic:
+            claude-3-sonnet-20240229-v1-0:
+              temperature: 0.7
+              max-tokens: 1000
+            claude-3-haiku-20240307-v1-0:
+              temperature: 0.5
+              max-tokens: 500
+
+# AWS SDK 설정
+aws:
+  region: us-east-1
+  credentials:
+    access-key-id: ${AWS_ACCESS_KEY_ID}
+    secret-access-key: ${AWS_SECRET_ACCESS_KEY}
+  
+  # AWS AI 서비스 설정
+  bedrock:
+    region: us-east-1
+    models:
+      claude-3-sonnet: anthropic.claude-3-sonnet-20240229-v1-0
+      claude-3-haiku: anthropic.claude-3-haiku-20240307-v1-0
+      titan-text: amazon.titan-text-express-v1
+  
+  sagemaker:
+    region: us-east-1
+    endpoint-name: ${SAGEMAKER_ENDPOINT_NAME:}
+
+# Actuator 설정
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
+
+# 로깅 설정
+logging:
+  level:
+    com.lotus.lotusawsai: DEBUG
+    software.amazon.awssdk: DEBUG
+    org.springframework.web: DEBUG
