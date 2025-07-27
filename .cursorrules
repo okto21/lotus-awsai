@@ -1,0 +1,251 @@
+# Lotus AWS AI 프로젝트 Cursor Rules
+
+## 프로젝트 개요
+이 프로젝트는 Spring Boot 3.2.3과 AWS AI 서비스(Bedrock, SageMaker)를 연동한 AI 애플리케이션입니다.
+
+## 코딩 스타일 및 컨벤션
+
+### Java 코딩 스타일
+- Java 17 사용
+- Lombok 사용 권장 (@Slf4j, @RequiredArgsConstructor, @Data 등)
+- Spring Boot 3.2.3 기반
+- 패키지명: com.lotus.lotusawsai
+- 클래스명: PascalCase
+- 메서드명: camelCase
+- 상수: UPPER_SNAKE_CASE
+
+### Spring Boot 컨벤션
+- @RestController 사용
+- @RequestMapping으로 API 경로 정의
+- ResponseEntity로 HTTP 응답 래핑
+- @Valid로 입력 검증
+- @Slf4j로 로깅
+
+### AWS AI 서비스 연동 패턴
+- BedrockRuntimeClient 사용
+- SdkBytes로 요청 바디 생성
+- ObjectMapper로 JSON 처리
+- 예외 처리 및 로깅 필수
+
+## 자동 생성 패턴
+
+### AWS AI 서비스 클래스 템플릿
+```java
+@Slf4j
+@Service
+@RequiredArgsConstructor
+public class [ServiceName]Service {
+    
+    private final BedrockRuntimeClient bedrockRuntimeClient;
+    private final ObjectMapper objectMapper;
+    
+    public String generateText(String prompt) {
+        try {
+            // AWS Bedrock 호출 로직
+            Map<String, Object> requestBody = new HashMap<>();
+            // ... 요청 바디 구성
+            
+            String jsonBody = objectMapper.writeValueAsString(requestBody);
+            SdkBytes body = SdkBytes.fromUtf8String(jsonBody);
+            
+            InvokeModelRequest request = InvokeModelRequest.builder()
+                    .modelId(modelId)
+                    .body(body)
+                    .build();
+            
+            InvokeModelResponse response = bedrockRuntimeClient.invokeModel(request);
+            // ... 응답 처리
+            
+            return result;
+        } catch (Exception e) {
+            log.error("Error calling AI model", e);
+            throw new RuntimeException("AI 모델 호출 중 오류가 발생했습니다.", e);
+        }
+    }
+}
+```
+
+### REST Controller 템플릿
+```java
+@Slf4j
+@RestController
+@RequestMapping("/api/[resource]")
+@RequiredArgsConstructor
+public class [ResourceName]Controller {
+    
+    private final [ServiceName]Service service;
+    
+    @PostMapping
+    public ResponseEntity<Map<String, String>> create(@RequestBody Map<String, String> request) {
+        try {
+            String result = service.process(request.get("input"));
+            return ResponseEntity.ok(Map.of("response", result));
+        } catch (Exception e) {
+            log.error("API 호출 중 오류", e);
+            return ResponseEntity.internalServerError()
+                    .body(Map.of("error", e.getMessage()));
+        }
+    }
+}
+```
+
+### Configuration 클래스 템플릿
+```java
+@Configuration
+public class [ConfigName]Config {
+    
+    @Value("${aws.credentials.access-key-id}")
+    private String accessKeyId;
+    
+    @Value("${aws.credentials.secret-access-key}")
+    private String secretAccessKey;
+    
+    @Value("${aws.region}")
+    private String region;
+    
+    @Bean
+    public [AwsClient] [clientName]() {
+        return [AwsClient].builder()
+                .region(Region.of(region))
+                .credentialsProvider(StaticCredentialsProvider.create(
+                        AwsBasicCredentials.create(accessKeyId, secretAccessKey)))
+                .build();
+    }
+}
+```
+
+## 자동화 제안
+
+### 1. 새로운 AI 모델 추가 시
+- Service 클래스에 새로운 메서드 추가
+- Controller에 새로운 엔드포인트 추가
+- application.yml에 모델 설정 추가
+- 테스트 코드 생성
+
+### 2. AWS 서비스 추가 시
+- Configuration 클래스에 Bean 추가
+- Service 클래스에 의존성 주입
+- application.yml에 설정 추가
+
+### 3. API 엔드포인트 추가 시
+- Controller에 메서드 추가
+- Service에 비즈니스 로직 추가
+- 입력 검증 추가
+- 예외 처리 추가
+- 로깅 추가
+
+## 코드 품질 가이드라인
+
+### 필수 요소
+- 모든 public 메서드에 JavaDoc 주석
+- 예외 처리 및 로깅
+- 입력 검증
+- 적절한 HTTP 상태 코드 반환
+
+### 권장 사항
+- 단위 테스트 작성
+- 통합 테스트 작성
+- API 문서화 (Swagger/OpenAPI)
+- 메트릭 수집 (Actuator)
+
+## 디버깅 및 로깅
+
+### 로깅 레벨
+- DEBUG: 개발 중 상세 정보
+- INFO: 일반적인 애플리케이션 흐름
+- WARN: 경고 상황
+- ERROR: 오류 상황
+
+### 로깅 패턴
+```java
+log.debug("Processing request: {}", request);
+log.info("AI model called successfully");
+log.warn("Rate limit approaching");
+log.error("Failed to call AI model", exception);
+```
+
+## 성능 최적화
+
+### AWS SDK 최적화
+- 클라이언트 재사용
+- 연결 풀링 활용
+- 비동기 호출 고려
+
+### Spring Boot 최적화
+- Actuator 메트릭 활용
+- 캐싱 전략 수립
+- 비동기 처리 고려
+
+## 보안 고려사항
+
+### AWS 자격 증명
+- 환경 변수 사용 권장
+- IAM 역할 활용 (EC2, ECS 등에서)
+- 최소 권한 원칙
+
+### API 보안
+- 입력 검증
+- CORS 설정
+- Rate Limiting 고려
+
+## 테스트 전략
+
+### 단위 테스트
+- Service 클래스 테스트
+- Mock 사용
+- 예외 상황 테스트
+
+### 통합 테스트
+- Controller 테스트
+- 실제 AWS 서비스 연동 테스트
+- @SpringBootTest 활용
+
+## 배포 고려사항
+
+### 환경별 설정
+- application-dev.yml
+- application-prod.yml
+- 환경 변수 활용
+
+### 모니터링
+- Actuator 엔드포인트 활용
+- AWS CloudWatch 연동
+- 로그 집계
+
+## 자동화 스크립트
+
+### 빌드 스크립트
+```bash
+./gradlew clean build
+./gradlew test
+./gradlew bootRun
+```
+
+### 배포 스크립트
+```bash
+./gradlew bootJar
+java -jar build/libs/lotus-awsai-0.0.1-SNAPSHOT.jar
+```
+
+## 문제 해결 가이드
+
+### 일반적인 문제들
+1. AWS 자격 증명 오류: 환경 변수 확인
+2. 모델 ID 오류: application.yml 설정 확인
+3. 네트워크 오류: AWS 리전 및 VPC 설정 확인
+4. 메모리 부족: JVM 힙 크기 조정
+
+### 디버깅 명령어
+```bash
+# 애플리케이션 실행
+./gradlew bootRun
+
+# 테스트 실행
+./gradlew test
+
+# 의존성 확인
+./gradlew dependencies
+
+# 빌드 정보 확인
+./gradlew build --info
+```
